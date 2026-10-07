@@ -1,0 +1,26 @@
+-- Job ownership migration, phase 2.
+-- Copy this file to a local, untracked .sql file and replace the placeholder
+-- email with the existing account that should own legacy jobs.
+-- Do not commit the edited copy. Review the SELECT result before UPDATE.
+
+SET @legacy_owner_email = 'REPLACE_WITH_APPROVED_OWNER_EMAIL';
+
+SELECT id, email
+FROM app_users
+WHERE email = @legacy_owner_email;
+
+SELECT IF(
+    EXISTS (SELECT 1 FROM app_users WHERE email = @legacy_owner_email),
+    'Owner found; review the job count before continuing',
+    'ERROR: owner email does not exist'
+) AS owner_check;
+
+-- After confirming the owner_check result, run the following update.
+UPDATE jobs j
+JOIN app_users u ON u.email = @legacy_owner_email
+SET j.user_id = u.id
+WHERE j.user_id IS NULL;
+
+SELECT COUNT(*) AS remaining_jobs_without_owner
+FROM jobs
+WHERE user_id IS NULL;

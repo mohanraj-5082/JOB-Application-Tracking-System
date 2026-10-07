@@ -1,0 +1,209 @@
+{
+  "info": {
+    "_postman_id": "c1f8c6e5-1e7d-4d88-9c3c-9c7d0b4c9a21",
+    "name": "JobTracker API",
+    "description": "Postman collection for the existing Job Tracker backend API. Select the JobTracker Local environment before sending requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const expectedStatus = Number(pm.variables.get('expectedStatus') || 200);",
+          "pm.test(`HTTP status is ${expectedStatus}`, function () { pm.response.to.have.status(expectedStatus); });",
+          "if (pm.response.code !== 204 && pm.response.code !== 404) {",
+          "  pm.test('response is JSON', function () { pm.response.to.be.json; });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "jobId", "value": "1", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "01 - Create",
+      "item": [
+        {
+          "name": "Create job",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyName\": \"Example Technologies\",\n  \"jobTitle\": \"Java Developer\",\n  \"status\": \"APPLIED\",\n  \"applicationDate\": \"2026-08-15\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/jobs", "host": ["{{baseUrl}}"], "path": ["api", "jobs"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "if (pm.response.code === 200) {",
+                "  const job = pm.response.json();",
+                "  pm.expect(job).to.have.property('id');",
+                "  pm.expect(job.companyName).to.eql('Example Technologies');",
+                "  pm.collectionVariables.set('jobId', String(job.id));",
+                "}"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "02 - Read",
+      "item": [
+        {
+          "name": "List jobs",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/jobs", "host": ["{{baseUrl}}"], "path": ["api", "jobs"] }
+          }
+        },
+        {
+          "name": "Get job by ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/jobs/{{jobId}}", "host": ["{{baseUrl}}"], "path": ["api", "jobs", "{{jobId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Update",
+      "item": [
+        {
+          "name": "Update job",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyName\": \"Example Technologies\",\n  \"jobTitle\": \"Senior Java Developer\",\n  \"status\": \"INTERVIEW\",\n  \"applicationDate\": \"2026-08-20\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/jobs/{{jobId}}", "host": ["{{baseUrl}}"], "path": ["api", "jobs", "{{jobId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Delete",
+      "item": [
+        {
+          "name": "Delete job",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/jobs/{{jobId}}", "host": ["{{baseUrl}}"], "path": ["api", "jobs", "{{jobId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Pagination & Sorting",
+      "item": [
+        {
+          "name": "Page 0, size 2",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/jobs?page=0&size=2", "host": ["{{baseUrl}}"], "path": ["api", "jobs"], "query": [{ "key": "page", "value": "0" }, { "key": "size", "value": "2" }] }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('page contains at most 2 jobs', function () { pm.expect(pm.response.json()).to.be.an('array').with.lengthOf.at.most(2); });"] } }]
+        },
+        {
+          "name": "Page 1, size 2",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/jobs?page=1&size=2", "host": ["{{baseUrl}}"], "path": ["api", "jobs"], "query": [{ "key": "page", "value": "1" }, { "key": "size", "value": "2" }] }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('page contains at most 2 jobs', function () { pm.expect(pm.response.json()).to.be.an('array').with.lengthOf.at.most(2); });"] } }]
+        },
+        {
+          "name": "Sort by company ascending",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/jobs?sort=companyName,asc", "host": ["{{baseUrl}}"], "path": ["api", "jobs"], "query": [{ "key": "sort", "value": "companyName,asc" }] } },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const jobs = pm.response.json(); pm.test('company names are ascending', function () { pm.expect(jobs.map(j => j.companyName)).to.eql([...jobs.map(j => j.companyName)].sort((a,b) => a.localeCompare(b))); });"] } }]
+        },
+        {
+          "name": "Sort by company descending",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/jobs?sort=companyName,desc", "host": ["{{baseUrl}}"], "path": ["api", "jobs"], "query": [{ "key": "sort", "value": "companyName,desc" }] } },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const jobs = pm.response.json(); pm.test('company names are descending', function () { pm.expect(jobs.map(j => j.companyName)).to.eql([...jobs.map(j => j.companyName)].sort((a,b) => b.localeCompare(a))); });"] } }]
+        },
+        {
+          "name": "Sort by application date descending",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/jobs?sort=applicationDate,desc", "host": ["{{baseUrl}}"], "path": ["api", "jobs"], "query": [{ "key": "sort", "value": "applicationDate,desc" }] } },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const jobs = pm.response.json(); pm.test('application dates are descending', function () { pm.expect(jobs.map(j => j.applicationDate)).to.eql([...jobs.map(j => j.applicationDate)].sort().reverse()); });"] } }]
+        }
+      ]
+    },
+    {
+      "name": "06 - Filtering & Search",
+      "item": [
+        {
+          "name": "Filter by APPLIED",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/jobs?status=APPLIED", "host": ["{{baseUrl}}"], "path": ["api", "jobs"], "query": [{ "key": "status", "value": "APPLIED" }] } },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('every job is APPLIED', function () { pm.expect(pm.response.json().every(j => j.status === 'APPLIED')).to.eql(true); });"] } }]
+        },
+        {
+          "name": "Filter by OFFER",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/jobs?status=OFFER", "host": ["{{baseUrl}}"], "path": ["api", "jobs"], "query": [{ "key": "status", "value": "OFFER" }] } },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('every job is OFFER', function () { pm.expect(pm.response.json().every(j => j.status === 'OFFER')).to.eql(true); });"] } }]
+        },
+        {
+          "name": "Search job title or company for java",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/jobs?search=java", "host": ["{{baseUrl}}"], "path": ["api", "jobs"], "query": [{ "key": "search", "value": "java" }] } }
+        },
+        {
+          "name": "Search job title or company for Google",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/jobs?search=Google", "host": ["{{baseUrl}}"], "path": ["api", "jobs"], "query": [{ "key": "search", "value": "Google" }] } }
+        },
+        {
+          "name": "Filter by inclusive date range",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/jobs?fromDate=2026-08-01&toDate=2026-08-31", "host": ["{{baseUrl}}"], "path": ["api", "jobs"], "query": [{ "key": "fromDate", "value": "2026-08-01" }, { "key": "toDate", "value": "2026-08-31" }] } }
+        },
+        {
+          "name": "Combined search status date pagination and sorting",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/jobs?search=java&status=APPLIED&fromDate=2026-08-01&toDate=2026-08-31&page=0&size=2&sort=applicationDate,desc", "host": ["{{baseUrl}}"], "path": ["api", "jobs"], "query": [{ "key": "search", "value": "java" }, { "key": "status", "value": "APPLIED" }, { "key": "fromDate", "value": "2026-08-01" }, { "key": "toDate", "value": "2026-08-31" }, { "key": "page", "value": "0" }, { "key": "size", "value": "2" }, { "key": "sort", "value": "applicationDate,desc" }] } }
+        }
+      ]
+    },
+    {
+      "name": "07 - Validation & Error Cases",
+      "item": [
+        {
+          "name": "Nonexistent job ID returns 404",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/jobs/999999999", "host": ["{{baseUrl}}"], "path": ["api", "jobs", "999999999"] } },
+          "variable": [{ "key": "expectedStatus", "value": "404" }]
+        },
+        {
+          "name": "Invalid status returns 400",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/jobs?status=UNKNOWN", "host": ["{{baseUrl}}"], "path": ["api", "jobs"], "query": [{ "key": "status", "value": "UNKNOWN" }] } },
+          "variable": [{ "key": "expectedStatus", "value": "400" }]
+        },
+        {
+          "name": "Invalid date format returns 400",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/jobs?fromDate=01-08-2026", "host": ["{{baseUrl}}"], "path": ["api", "jobs"], "query": [{ "key": "fromDate", "value": "01-08-2026" }] } },
+          "variable": [{ "key": "expectedStatus", "value": "400" }]
+        },
+        {
+          "name": "fromDate greater than toDate returns 400",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/jobs?fromDate=2026-08-31&toDate=2026-08-01", "host": ["{{baseUrl}}"], "path": ["api", "jobs"], "query": [{ "key": "fromDate", "value": "2026-08-31" }, { "key": "toDate", "value": "2026-08-01" }] } },
+          "variable": [{ "key": "expectedStatus", "value": "400" }]
+        },
+        {
+          "name": "Invalid request body returns 400",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"companyName\": \"\",\n  \"jobTitle\": \"\",\n  \"status\": null,\n  \"applicationDate\": null\n}" },
+            "url": { "raw": "{{baseUrl}}/api/jobs", "host": ["{{baseUrl}}"], "path": ["api", "jobs"] }
+          },
+          "variable": [{ "key": "expectedStatus", "value": "400" }]
+        }
+      ]
+    }
+  ]
+}
